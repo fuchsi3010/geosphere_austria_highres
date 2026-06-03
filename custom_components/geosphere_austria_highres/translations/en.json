@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "GeoSphere Austria",
+        "title": "GeoSphere Austria High-Res Nowcast",
         "description": "Pick the point to forecast. The map defaults to your Home location.",
         "data": {
           "name": "Name",
@@ -20,7 +20,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "GeoSphere Austria options",
+        "title": "GeoSphere Austria High-Res Nowcast options",
         "data": {
           "rain_threshold": "Rain threshold (mm per 15 min)",
           "scan_interval": "Update interval (minutes)"

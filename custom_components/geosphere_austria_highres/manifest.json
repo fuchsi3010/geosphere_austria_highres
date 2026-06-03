@@ -1,0 +1,13 @@
+{
+  "domain": "geosphere_austria_highres",
+  "name": "GeoSphere Austria High-Res Nowcast",
+  "version": "0.1.0",
+  "codeowners": ["@fuchsi3010"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/fuchsi3010/geosphere_austria_highres",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/fuchsi3010/geosphere_austria_highres/issues",
+  "requirements": []
+}

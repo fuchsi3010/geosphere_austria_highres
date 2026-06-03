@@ -1,4 +1,4 @@
-# GeoSphere Austria — Home Assistant integration
+# GeoSphere Austria High-Res Nowcast — Home Assistant integration
 
 Near-real-time **rain nowcasting** for any point in Austria, using the
 [GeoSphere Austria Data Hub](https://data.hub.geosphere.at/) **INCA nowcast**
@@ -9,6 +9,11 @@ Because it is a *forecast*, you get a ~15-minute **lead** ("rain starts in
 15 min") instead of the ~10–20-minute *lag* you get from observation-only
 station integrations — so rain automations can fire **before** it rains.
 
+> **Not the same as the core [`zamg`](https://www.home-assistant.io/integrations/zamg/)
+> integration.** That one (also "GeoSphere Austria") exposes *observed* data from
+> physical weather stations. This one exposes the *forecast* INCA nowcast for any
+> 1 km grid point — they are complementary, and you can run both.
+
 > Data: GeoSphere Austria Data Hub, licensed **CC BY 4.0**. The API is open and
 > needs no API key. This integration polls gently (every 10 min by default,
 > with a hard 5-minute floor between network calls) and uses a 10 s timeout.
@@ -16,17 +21,18 @@ station integrations — so rain automations can fire **before** it rains.
 ## Installation
 
 ### Option A — HACS (custom repository)
-1. HACS → ⋮ → **Custom repositories** → add this repo's URL, category
+1. HACS → ⋮ → **Custom repositories** → add
+   `https://github.com/fuchsi3010/geosphere_austria_highres`, category
    **Integration**.
-2. Install **GeoSphere Austria**, then restart Home Assistant.
+2. Install **GeoSphere Austria High-Res Nowcast**, then restart Home Assistant.
 
 ### Option B — Manual
-Copy `custom_components/geosphere/` into your HA `config/custom_components/`
-directory and restart Home Assistant.
+Copy `custom_components/geosphere_austria_highres/` into your HA
+`config/custom_components/` directory and restart Home Assistant.
 
 ## Configuration
 
-**Settings → Devices & Services → Add Integration → "GeoSphere Austria"**.
+**Settings → Devices & Services → Add Integration → "GeoSphere Austria High-Res Nowcast"**.
 A map appears defaulting to your **Home** location — accept it or drag the
 marker to any point in Austria, give it a name, and submit. Add multiple
 points by adding the integration again.

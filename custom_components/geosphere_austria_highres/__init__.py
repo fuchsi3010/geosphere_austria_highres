@@ -1,4 +1,4 @@
-"""The GeoSphere Austria integration."""
+"""The GeoSphere Austria High-Res Nowcast integration."""
 
 from __future__ import annotations
 

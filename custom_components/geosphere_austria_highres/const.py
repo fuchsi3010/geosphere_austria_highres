@@ -1,10 +1,10 @@
-"""Constants and pure helpers for the GeoSphere Austria integration."""
+"""Constants and pure helpers for the GeoSphere Austria High-Res Nowcast integration."""
 
 from __future__ import annotations
 
 from datetime import timedelta
 
-DOMAIN = "geosphere"
+DOMAIN = "geosphere_austria_highres"
 
 BASE_URL = "https://dataset.api.hub.geosphere.at/v1"
 NOWCAST_RESOURCE = "/timeseries/forecast/nowcast-v1-15min-1km"
