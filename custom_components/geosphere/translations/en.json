@@ -1,0 +1,55 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "GeoSphere Austria",
+        "description": "Pick the point to forecast. The map defaults to your Home location.",
+        "data": {
+          "name": "Name",
+          "location": "Location"
+        }
+      }
+    },
+    "error": {
+      "outside_austria": "The selected location is outside Austria. The GeoSphere nowcast only covers Austria."
+    },
+    "abort": {
+      "already_configured": "This location is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "GeoSphere Austria options",
+        "data": {
+          "rain_threshold": "Rain threshold (mm per 15 min)",
+          "scan_interval": "Update interval (minutes)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "precipitation": { "name": "Precipitation" },
+      "precip_next_hour": { "name": "Precipitation next hour" },
+      "minutes_until_rain": { "name": "Minutes until rain" },
+      "precipitation_type": {
+        "name": "Precipitation type",
+        "state": {
+          "none": "None",
+          "rain": "Rain",
+          "snow": "Snow",
+          "sleet": "Sleet",
+          "freezing_rain": "Freezing rain",
+          "precipitation": "Precipitation"
+        }
+      },
+      "temperature": { "name": "Temperature" },
+      "humidity": { "name": "Humidity" },
+      "wind_speed": { "name": "Wind speed" }
+    },
+    "binary_sensor": {
+      "rain_expected": { "name": "Rain expected" }
+    }
+  }
+}
