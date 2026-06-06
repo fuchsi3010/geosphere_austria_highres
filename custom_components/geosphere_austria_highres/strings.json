@@ -22,16 +22,15 @@
       "init": {
         "title": "GeoSphere Austria High-Res Nowcast options",
         "data": {
-          "rain_threshold": "Rain threshold (mm per 15 min)",
-          "scan_interval": "Update interval (minutes)"
+          "rain_threshold": "Rain threshold (mm per 15 min)"
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "precipitation": { "name": "Precipitation" },
-      "precip_next_hour": { "name": "Precipitation next hour" },
+      "precipitation": { "name": "Precipitation (next 15 min)" },
+      "precip_next_hour": { "name": "Precipitation (next hour)" },
       "minutes_until_rain": { "name": "Minutes until rain" },
       "precipitation_type": {
         "name": "Precipitation type",
@@ -45,8 +44,11 @@
         }
       },
       "temperature": { "name": "Temperature" },
+      "dew_point": { "name": "Dew point" },
       "humidity": { "name": "Humidity" },
-      "wind_speed": { "name": "Wind speed" }
+      "wind_speed": { "name": "Wind speed" },
+      "wind_gust": { "name": "Wind gust" },
+      "wind_direction": { "name": "Wind direction" }
     },
     "binary_sensor": {
       "rain_expected": { "name": "Rain expected" }

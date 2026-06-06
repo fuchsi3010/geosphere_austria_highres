@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
+import random
 from statistics import mean, mode
 from typing import Any
 
@@ -14,9 +15,15 @@ from homeassistant.util import dt as dt_util
 
 from .api import GeoSphereApiClient, GeoSphereApiError
 from .const import (
-    MIN_TIME_BETWEEN_UPDATES,
+    FAILURE_RETRY,
+    MAX_STALENESS_RETRIES,
+    MIN_FETCH_SPACING,
     PARAMETERS,
+    PUBLISH_JITTER,
+    PUBLISH_OFFSET,
     RAIN_THRESHOLD_MM,
+    RUN_INTERVAL,
+    STALENESS_RETRY,
     STEPS_PER_HOUR,
     derive_condition,
     pt_to_text,
@@ -36,7 +43,13 @@ class GeoSphereData:
 
 
 class GeoSphereDataUpdateCoordinator(DataUpdateCoordinator[GeoSphereData]):
-    """Polls the nowcast endpoint on an interval, with a hard request floor."""
+    """Polls the nowcast endpoint aligned to the model's publish cadence.
+
+    Rather than a fixed interval, each successful fetch schedules the next wake
+    just after the next 15-min publish boundary. If a run published late (we got
+    the same ``reference_time`` back), it retries quickly instead of waiting a
+    full run.
+    """
 
     def __init__(
         self,
@@ -46,14 +59,18 @@ class GeoSphereDataUpdateCoordinator(DataUpdateCoordinator[GeoSphereData]):
         latitude: float,
         longitude: float,
         name: str,
-        update_interval: timedelta,
         rain_threshold: float = RAIN_THRESHOLD_MM,
     ) -> None:
+        # Fixed per-coordinator phase so concurrent installs spread their load.
+        self._jitter = timedelta(
+            seconds=random.uniform(0, PUBLISH_JITTER.total_seconds())
+        )
         super().__init__(
             hass,
             _LOGGER,
             name=name,
-            update_interval=update_interval,
+            # Corrected after every fetch; the first refresh runs immediately.
+            update_interval=_aligned_interval(dt_util.utcnow(), self._jitter),
             # Skip needless entity state writes when the payload is unchanged.
             always_update=False,
         )
@@ -62,26 +79,54 @@ class GeoSphereDataUpdateCoordinator(DataUpdateCoordinator[GeoSphereData]):
         self.longitude = longitude
         self.rain_threshold = rain_threshold
         self._last_fetch: datetime | None = None
+        self._last_reference_time: datetime | None = None
+        self._retry_count = 0
 
     async def _async_update_data(self) -> GeoSphereData:
-        """Fetch + parse, but never hit the network faster than the floor."""
+        """Fetch + parse, then arm the next wake aligned to the publish cadence."""
         now = dt_util.utcnow()
         if (
             self.data is not None
             and self._last_fetch is not None
-            and now - self._last_fetch < MIN_TIME_BETWEEN_UPDATES
+            and now - self._last_fetch < MIN_FETCH_SPACING
         ):
-            # Too soon since the last real call (e.g. a reload) — reuse cache.
+            # Unscheduled refresh too soon after a real call — reuse cache and
+            # leave the existing schedule untouched.
             return self.data
 
         try:
             raw = await self.client.async_get_nowcast(self.latitude, self.longitude)
         except GeoSphereApiError as err:
+            self.update_interval = FAILURE_RETRY
             raise UpdateFailed(str(err)) from err
 
         data = _parse_nowcast(raw)
         self._last_fetch = now
+
+        is_new_run = data.reference_time != self._last_reference_time
+        self._last_reference_time = data.reference_time
+
+        if (
+            not is_new_run
+            and data.reference_time is not None
+            and self._retry_count < MAX_STALENESS_RETRIES
+        ):
+            # Same run as last time — the new one published late; retry soon.
+            self._retry_count += 1
+            self.update_interval = STALENESS_RETRY
+        else:
+            self._retry_count = 0
+            self.update_interval = _aligned_interval(now, self._jitter)
+
         return data
+
+
+def _aligned_interval(now: datetime, jitter: timedelta) -> timedelta:
+    """Delay from ``now`` until just after the next 15-min publish boundary (UTC)."""
+    period = RUN_INTERVAL.total_seconds()
+    into = (now.minute * 60 + now.second + now.microsecond / 1e6) % period
+    offset = PUBLISH_OFFSET.total_seconds() + jitter.total_seconds()
+    return timedelta(seconds=(period - into) + offset)
 
 
 def _parse_nowcast(raw: Any) -> GeoSphereData:
@@ -187,6 +232,8 @@ def hourly_forecast(data: GeoSphereData) -> list[dict[str, Any]]:
         rr_vals = _values_at(rr, idxs)
         pt_vals = _values_at(pt, idxs)
         rr_sum = round(sum(rr_vals), 2) if rr_vals else None
+        # Condition uses a rate (mm/h) so partial buckets aren't under-counted.
+        rr_rate = mean(rr_vals) * STEPS_PER_HOUR if rr_vals else None
         pt_mode = mode(pt_vals) if pt_vals else None
         t_vals = _values_at(t2m, idxs)
         h_vals = _values_at(rh2m, idxs)
@@ -195,7 +242,7 @@ def hourly_forecast(data: GeoSphereData) -> list[dict[str, Any]]:
         forecast.append(
             {
                 "datetime": hour,
-                "condition": derive_condition(rr_sum, pt_mode),
+                "condition": derive_condition(rr_rate, pt_mode),
                 "precipitation": rr_sum,
                 "temperature": round(mean(t_vals), 2) if t_vals else None,
                 "humidity": round(mean(h_vals), 2) if h_vals else None,

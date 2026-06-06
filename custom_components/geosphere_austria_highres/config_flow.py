@@ -16,7 +16,6 @@ from homeassistant.const import (
     CONF_LOCATION,
     CONF_LONGITUDE,
     CONF_NAME,
-    CONF_SCAN_INTERVAL,
 )
 from homeassistant.core import callback
 from homeassistant.helpers import selector
@@ -24,9 +23,7 @@ from homeassistant.helpers import selector
 from .const import (
     BBOX,
     CONF_RAIN_THRESHOLD,
-    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    MIN_SCAN_INTERVAL_MINUTES,
     RAIN_THRESHOLD_MM,
 )
 
@@ -113,21 +110,6 @@ class GeoSphereOptionsFlow(OptionsFlow):
                         max=10,
                         step=0.1,
                         unit_of_measurement="mm",
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                ),
-                vol.Optional(
-                    CONF_SCAN_INTERVAL,
-                    default=options.get(
-                        CONF_SCAN_INTERVAL,
-                        int(DEFAULT_SCAN_INTERVAL.total_seconds() // 60),
-                    ),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=MIN_SCAN_INTERVAL_MINUTES,
-                        max=60,
-                        step=1,
-                        unit_of_measurement="min",
                         mode=selector.NumberSelectorMode.BOX,
                     )
                 ),

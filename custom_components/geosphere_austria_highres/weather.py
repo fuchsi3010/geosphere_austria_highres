@@ -18,7 +18,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import ATTRIBUTION, derive_condition
+from .const import ATTRIBUTION, STEPS_PER_HOUR, derive_condition
 from .coordinator import GeoSphereDataUpdateCoordinator, hourly_forecast
 from .entity import geosphere_device_info
 
@@ -62,9 +62,10 @@ class GeoSphereWeather(
         data = self.coordinator.data
         if data is None:
             return None
-        return derive_condition(
-            _first(data.params.get("rr")), _first(data.params.get("pt"))
-        )
+        rr0 = _first(data.params.get("rr"))
+        # rr0 is mm in the next 15 min; condition wants a rate (mm/h).
+        rate = rr0 * STEPS_PER_HOUR if rr0 is not None else None
+        return derive_condition(rate, _first(data.params.get("pt")))
 
     @property
     def native_temperature(self) -> float | None:

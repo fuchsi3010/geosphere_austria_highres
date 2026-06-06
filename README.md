@@ -15,8 +15,14 @@ station integrations — so rain automations can fire **before** it rains.
 > 1 km grid point — they are complementary, and you can run both.
 
 > Data: GeoSphere Austria Data Hub, licensed **CC BY 4.0**. The API is open and
-> needs no API key. This integration polls gently (every 10 min by default,
-> with a hard 5-minute floor between network calls) and uses a 10 s timeout.
+> needs no API key. This integration polls gently — aligned to the model's
+> 15-minute publish cadence (a few seconds after each new run, with random
+> jitter so installs don't sync up), with a 10 s timeout — well under the API's
+> rate limits.
+>
+> *Not affiliated with or endorsed by GeoSphere Austria. "GeoSphere Austria" is
+> used only to identify the data source. The icon is original artwork, not
+> GeoSphere's logo.*
 
 ## Installation
 

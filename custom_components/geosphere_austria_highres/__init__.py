@@ -2,24 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
-
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CONF_LATITUDE,
-    CONF_LONGITUDE,
-    CONF_SCAN_INTERVAL,
-    Platform,
-)
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import GeoSphereApiClient
-from .const import (
-    CONF_RAIN_THRESHOLD,
-    DEFAULT_SCAN_INTERVAL,
-    RAIN_THRESHOLD_MM,
-)
+from .const import CONF_RAIN_THRESHOLD, RAIN_THRESHOLD_MM
 from .coordinator import GeoSphereDataUpdateCoordinator
 
 PLATFORMS = [Platform.WEATHER, Platform.SENSOR, Platform.BINARY_SENSOR]
@@ -34,18 +23,12 @@ async def async_setup_entry(
     session = async_get_clientsession(hass)
     client = GeoSphereApiClient(session)
 
-    scan_minutes = entry.options.get(CONF_SCAN_INTERVAL)
-    update_interval = (
-        timedelta(minutes=scan_minutes) if scan_minutes else DEFAULT_SCAN_INTERVAL
-    )
-
     coordinator = GeoSphereDataUpdateCoordinator(
         hass,
         client=client,
         latitude=entry.data[CONF_LATITUDE],
         longitude=entry.data[CONF_LONGITUDE],
         name=entry.title,
-        update_interval=update_interval,
         rain_threshold=entry.options.get(CONF_RAIN_THRESHOLD, RAIN_THRESHOLD_MM),
     )
     await coordinator.async_config_entry_first_refresh()

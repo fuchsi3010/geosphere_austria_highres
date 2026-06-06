@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import (
+    DEGREE,
     PERCENTAGE,
     UnitOfPrecipitationDepth,
     UnitOfSpeed,
@@ -41,6 +42,12 @@ class GeoSphereSensorEntityDescription(SensorEntityDescription):
     """Sensor description carrying a pure value function."""
 
     value_fn: Callable[[GeoSphereData], StateType]
+
+
+def _first(data: GeoSphereData, param: str) -> float | None:
+    """First (next-15-min) value of a raw parameter, or None if absent."""
+    values = data.params.get(param)
+    return values[0] if values else None
 
 
 SENSORS: tuple[GeoSphereSensorEntityDescription, ...] = (
@@ -97,14 +104,35 @@ SENSORS: tuple[GeoSphereSensorEntityDescription, ...] = (
         ),
     ),
     GeoSphereSensorEntityDescription(
+        key="dew_point",
+        translation_key="dew_point",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: _first(data, "td"),
+    ),
+    GeoSphereSensorEntityDescription(
         key="wind_speed",
         translation_key="wind_speed",
         device_class=SensorDeviceClass.WIND_SPEED,
         native_unit_of_measurement=UnitOfSpeed.METERS_PER_SECOND,
         state_class=SensorStateClass.MEASUREMENT,
-        value_fn=lambda data: (
-            data.params["ff"][0] if data.params.get("ff") else None
-        ),
+        value_fn=lambda data: _first(data, "ff"),
+    ),
+    GeoSphereSensorEntityDescription(
+        key="wind_gust",
+        translation_key="wind_gust",
+        device_class=SensorDeviceClass.WIND_SPEED,
+        native_unit_of_measurement=UnitOfSpeed.METERS_PER_SECOND,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda data: _first(data, "fx"),
+    ),
+    GeoSphereSensorEntityDescription(
+        key="wind_direction",
+        translation_key="wind_direction",
+        native_unit_of_measurement=DEGREE,
+        icon="mdi:compass-outline",
+        value_fn=lambda data: _first(data, "dd"),
     ),
 )
 
