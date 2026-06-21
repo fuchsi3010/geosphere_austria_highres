@@ -27,6 +27,7 @@ from homeassistant.helpers.typing import StateType
 from .const import PRECIP_TYPE_OPTIONS, pt_to_text
 from .coordinator import (
     GeoSphereData,
+    minutes_until_downpour,
     minutes_until_rain,
     precip_next_hour,
     precip_now,
@@ -144,9 +145,11 @@ async def async_setup_entry(
 ) -> None:
     """Set up the sensor entities."""
     coordinator = entry.runtime_data
-    async_add_entities(
+    entities: list[SensorEntity] = [
         GeoSphereSensor(coordinator, entry, description) for description in SENSORS
-    )
+    ]
+    entities.append(GeoSphereMinutesUntilDownpourSensor(coordinator, entry))
+    async_add_entities(entities)
 
 
 class GeoSphereSensor(GeoSphereEntity, SensorEntity):
@@ -170,3 +173,27 @@ class GeoSphereSensor(GeoSphereEntity, SensorEntity):
             return self.entity_description.value_fn(data)
         except (IndexError, KeyError, TypeError):
             return None
+
+
+class GeoSphereMinutesUntilDownpourSensor(GeoSphereEntity, SensorEntity):
+    """Minutes until the first forecast step reaching the downpour threshold.
+
+    Kept as its own class (rather than a SENSORS entry) so it can honour the
+    per-entry, user-configurable ``downpour_threshold`` live — the same way the
+    rain-expected binary sensor reads ``rain_threshold``.
+    """
+
+    _attr_translation_key = "minutes_until_downpour"
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+
+    def __init__(self, coordinator, entry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_minutes_until_downpour"
+
+    @property
+    def native_value(self) -> StateType:
+        data = self.coordinator.data
+        if data is None:
+            return None
+        return minutes_until_downpour(data, self.coordinator.downpour_threshold)

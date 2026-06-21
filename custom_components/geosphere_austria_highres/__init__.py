@@ -8,7 +8,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import GeoSphereApiClient
-from .const import CONF_RAIN_THRESHOLD, RAIN_THRESHOLD_MM
+from .const import (
+    CONF_DOWNPOUR_THRESHOLD,
+    CONF_RAIN_THRESHOLD,
+    DOWNPOUR_THRESHOLD_MM,
+    RAIN_THRESHOLD_MM,
+)
 from .coordinator import GeoSphereDataUpdateCoordinator
 
 PLATFORMS = [Platform.WEATHER, Platform.SENSOR, Platform.BINARY_SENSOR]
@@ -30,6 +35,9 @@ async def async_setup_entry(
         longitude=entry.data[CONF_LONGITUDE],
         name=entry.title,
         rain_threshold=entry.options.get(CONF_RAIN_THRESHOLD, RAIN_THRESHOLD_MM),
+        downpour_threshold=entry.options.get(
+            CONF_DOWNPOUR_THRESHOLD, DOWNPOUR_THRESHOLD_MM
+        ),
     )
     await coordinator.async_config_entry_first_refresh()
 

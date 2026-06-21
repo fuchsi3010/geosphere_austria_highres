@@ -22,8 +22,10 @@ from homeassistant.helpers import selector
 
 from .const import (
     BBOX,
+    CONF_DOWNPOUR_THRESHOLD,
     CONF_RAIN_THRESHOLD,
     DOMAIN,
+    DOWNPOUR_THRESHOLD_MM,
     RAIN_THRESHOLD_MM,
 )
 
@@ -108,6 +110,20 @@ class GeoSphereOptionsFlow(OptionsFlow):
                     selector.NumberSelectorConfig(
                         min=0,
                         max=10,
+                        step=0.1,
+                        unit_of_measurement="mm",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Optional(
+                    CONF_DOWNPOUR_THRESHOLD,
+                    default=options.get(
+                        CONF_DOWNPOUR_THRESHOLD, DOWNPOUR_THRESHOLD_MM
+                    ),
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=0,
+                        max=20,
                         step=0.1,
                         unit_of_measurement="mm",
                         mode=selector.NumberSelectorMode.BOX,

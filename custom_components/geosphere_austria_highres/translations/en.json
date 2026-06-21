@@ -22,7 +22,8 @@
       "init": {
         "title": "GeoSphere Austria High-Res Nowcast options",
         "data": {
-          "rain_threshold": "Rain threshold (mm per 15 min)"
+          "rain_threshold": "Rain threshold (mm per 15 min)",
+          "downpour_threshold": "Downpour threshold (mm per 15 min)"
         }
       }
     }
@@ -32,6 +33,7 @@
       "precipitation": { "name": "Precipitation (next 15 min)" },
       "precip_next_hour": { "name": "Precipitation (next hour)" },
       "minutes_until_rain": { "name": "Minutes until rain" },
+      "minutes_until_downpour": { "name": "Minutes until downpour" },
       "precipitation_type": {
         "name": "Precipitation type",
         "state": {

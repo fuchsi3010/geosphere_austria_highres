@@ -48,6 +48,7 @@ Options (gear icon on the entry):
 | Option | Default | Notes |
 |---|---|---|
 | Rain threshold | `0.1` mm/15 min | Drives "rain expected" + "minutes until rain". |
+| Downpour threshold | `1.0` mm/15 min | Drives "minutes until downpour" (≈ 4 mm/h, the "pouring" rate). |
 | Update interval | `10` min | Minimum `5`. The API re-issues every 15 min. |
 
 ## Entities
@@ -59,6 +60,8 @@ Per configured point you get one device with:
 - **`sensor.*_precipitation`** — precip in the next 15 min (mm).
 - **`sensor.*_precipitation_next_hour`** — summed precip over the next hour (mm).
 - **`sensor.*_minutes_until_rain`** — minutes until the first raining step.
+- **`sensor.*_minutes_until_downpour`** — minutes until the first step reaching
+  the *downpour* threshold (heavy rain only). `unknown` when none is forecast.
 - **`sensor.*_precipitation_type`** — enum (`none`/`rain`/`snow`/…).
 - **`sensor.*_temperature`**, **`sensor.*_humidity`**, **`sensor.*_wind_speed`**.
 - **`binary_sensor.*_rain_expected`** — on when rain is forecast within the
@@ -83,6 +86,43 @@ automation:
             {{ state_attr('binary_sensor.geosphere_home_rain_expected',
                'minutes_until_rain') }} min.
 ```
+
+## Example: warn ~1 h and ~15 min before a downpour
+
+`sensor.*_minutes_until_downpour` counts down to heavy rain only, so it's the
+right trigger for "bring it in" alerts. The countdown moves in ~15-min steps
+(one model step per refresh), so the band on the 1 h alert makes it fire once
+as it crosses ~60.
+
+```yaml
+automation:
+  - alias: "Downpour — 1 h warning"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.geosphere_home_minutes_until_downpour
+        above: 45
+        below: 75
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: "Downpour incoming"
+          message: "Heavy rain in ~{{ trigger.to_state.state }} min."
+
+  - alias: "Downpour — 15 min warning"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.geosphere_home_minutes_until_downpour
+        below: 16
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: "Downpour now"
+          message: "Heavy rain in ~{{ trigger.to_state.state }} min — bring it in."
+```
+
+Fast-developing convection often only enters the nowcast ~30–45 min out, so the
+1 h alert can occasionally land late or coincide with the 15-min one — that's
+the nature of nowcasting, not the automation.
 
 ## Limitations
 

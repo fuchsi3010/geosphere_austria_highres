@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .api import GeoSphereApiClient, GeoSphereApiError
 from .const import (
+    DOWNPOUR_THRESHOLD_MM,
     FAILURE_RETRY,
     MAX_STALENESS_RETRIES,
     MIN_FETCH_SPACING,
@@ -60,6 +61,7 @@ class GeoSphereDataUpdateCoordinator(DataUpdateCoordinator[GeoSphereData]):
         longitude: float,
         name: str,
         rain_threshold: float = RAIN_THRESHOLD_MM,
+        downpour_threshold: float = DOWNPOUR_THRESHOLD_MM,
     ) -> None:
         # Fixed per-coordinator phase so concurrent installs spread their load.
         self._jitter = timedelta(
@@ -78,6 +80,7 @@ class GeoSphereDataUpdateCoordinator(DataUpdateCoordinator[GeoSphereData]):
         self.latitude = latitude
         self.longitude = longitude
         self.rain_threshold = rain_threshold
+        self.downpour_threshold = downpour_threshold
         self._last_fetch: datetime | None = None
         self._last_reference_time: datetime | None = None
         self._retry_count = 0
@@ -197,6 +200,28 @@ def minutes_until_rain(
             pt_i is not None and pt_to_text(pt_i) != "none"
         )
         if rains:
+            minutes = (ts - now).total_seconds() / 60
+            return max(0, int(round(minutes)))
+    return None
+
+
+def minutes_until_downpour(
+    data: GeoSphereData, threshold: float = DOWNPOUR_THRESHOLD_MM
+) -> int | None:
+    """Whole minutes until the first step whose precip reaches ``threshold``.
+
+    Unlike :func:`minutes_until_rain`, this keys purely off precip *amount*
+    (mm per 15-min step): a downpour is about intensity, not whether some
+    precipitation type happens to be flagged. Returns None if no step within
+    the horizon is that heavy.
+    """
+    rr = data.params.get("rr") or []
+    now = dt_util.utcnow()
+    for i, ts in enumerate(data.timestamps):
+        if ts is None:
+            continue
+        rr_i = rr[i] if i < len(rr) else None
+        if rr_i is not None and rr_i >= threshold:
             minutes = (ts - now).total_seconds() / 60
             return max(0, int(round(minutes)))
     return None

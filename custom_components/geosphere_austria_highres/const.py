@@ -38,6 +38,10 @@ MIN_FETCH_SPACING = timedelta(seconds=60)
 
 # Alert threshold (mm per 15-min step): drives rain_expected / minutes_until_rain.
 RAIN_THRESHOLD_MM = 0.1
+# Heavier threshold (mm per 15-min step) for the "downpour" countdown. 1.0 mm /
+# 15 min == 4 mm/h, matching CONDITION_POURING_MMH below, so the sensor counts
+# down to genuinely heavy rain rather than any drizzle.
+DOWNPOUR_THRESHOLD_MM = 1.0
 # Weather *condition* is derived from a precip RATE (mm/h) instead, so current
 # (15-min) and hourly inputs are comparable, and deliberately higher than the
 # alert threshold so light drizzle reads as cloudy rather than rainy.
@@ -50,6 +54,7 @@ STEPS_PER_HOUR = 4
 ATTRIBUTION = "Data: GeoSphere Austria Data Hub (CC BY 4.0)"
 
 CONF_RAIN_THRESHOLD = "rain_threshold"
+CONF_DOWNPOUR_THRESHOLD = "downpour_threshold"
 
 # HA condition string literals (public, stable values) — kept as literals so
 # this module stays import-light (it is loaded during the config flow).
