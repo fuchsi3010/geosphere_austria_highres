@@ -27,7 +27,6 @@ from .const import (
     STALENESS_RETRY,
     STEPS_PER_HOUR,
     derive_condition,
-    pt_to_text,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -187,19 +186,24 @@ def precip_next_hour(data: GeoSphereData) -> float | None:
 def minutes_until_rain(
     data: GeoSphereData, threshold: float = RAIN_THRESHOLD_MM
 ) -> int | None:
-    """Whole minutes until the first step that rains, or None within horizon."""
+    """Whole minutes until the first step that rains, or None within horizon.
+
+    Keyed purely off precip *amount* (rr >= threshold), consistent with
+    ``rain_expected`` and ``minutes_until_downpour``. An earlier version also
+    counted any step whose precip-*type* flag ``pt`` was non-"none", but in
+    practice ``pt`` is set ("rain") across nearly the whole horizon while rr is
+    still trace drizzle — so the countdown locked onto the nearest pt-flagged
+    step and produced a misleadingly precise "rain in N min" for what was really
+    near-dry. Dropping the pt-OR clause makes the countdown reflect forecast
+    precipitation, not the broadly-set type flag.
+    """
     rr = data.params.get("rr") or []
-    pt = data.params.get("pt") or []
     now = dt_util.utcnow()
     for i, ts in enumerate(data.timestamps):
         if ts is None:
             continue
         rr_i = rr[i] if i < len(rr) else None
-        pt_i = pt[i] if i < len(pt) else None
-        rains = (rr_i is not None and rr_i >= threshold) or (
-            pt_i is not None and pt_to_text(pt_i) != "none"
-        )
-        if rains:
+        if rr_i is not None and rr_i >= threshold:
             minutes = (ts - now).total_seconds() / 60
             return max(0, int(round(minutes)))
     return None

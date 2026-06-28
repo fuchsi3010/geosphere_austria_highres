@@ -1,7 +1,7 @@
 {
   "domain": "geosphere_austria_highres",
   "name": "GeoSphere Austria High-Res Nowcast",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "codeowners": ["@fuchsi3010"],
   "config_flow": true,
   "dependencies": [],
