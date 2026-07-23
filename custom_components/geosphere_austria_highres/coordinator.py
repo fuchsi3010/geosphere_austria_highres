@@ -25,6 +25,7 @@ from .const import (
     RAIN_THRESHOLD_MM,
     RUN_INTERVAL,
     STALENESS_RETRY,
+    STEP_DELTA,
     STEPS_PER_HOUR,
     derive_condition,
 )
@@ -170,32 +171,50 @@ def _values_at(arr: list[float | None], idxs: list[int]) -> list[float]:
     return [arr[i] for i in idxs if i < len(arr) and arr[i] is not None]
 
 
+def _future_window_indices(data: GeoSphereData, now: datetime) -> list[int]:
+    """Indices of steps whose accumulation window has not fully passed.
+
+    Timestamps label the END of each 15-min window (first timestamp is
+    reference_time + 15 min), and runs publish ~10 min late — so with a stale
+    run the leading steps can lie entirely in the past. A step stays relevant
+    while its window end is in the future.
+    """
+    return [
+        i for i, ts in enumerate(data.timestamps) if ts is not None and ts > now
+    ]
+
+
 def precip_now(data: GeoSphereData) -> float | None:
-    """Precip in the first (next-15-min) step."""
+    """Precip in the current 15-min window (the first window still open)."""
     rr = data.params.get("rr") or []
+    idxs = _future_window_indices(data, dt_util.utcnow())
+    if idxs and idxs[0] < len(rr):
+        return rr[idxs[0]]
     return rr[0] if rr else None
 
 
 def precip_next_hour(data: GeoSphereData) -> float | None:
-    """Sum of precip over the next hour (4 steps), skipping gaps."""
-    rr = (data.params.get("rr") or [])[:STEPS_PER_HOUR]
-    vals = [v for v in rr if v is not None]
+    """Sum of precip over the next hour: the 4 windows still open, skipping gaps."""
+    rr = data.params.get("rr") or []
+    idxs = _future_window_indices(data, dt_util.utcnow())[:STEPS_PER_HOUR]
+    vals = _values_at(rr, idxs)
     return round(sum(vals), 2) if vals else None
 
 
 def minutes_until_rain(
     data: GeoSphereData, threshold: float = RAIN_THRESHOLD_MM
 ) -> int | None:
-    """Whole minutes until the first step that rains, or None within horizon.
+    """Whole minutes until rain can begin, or None within the horizon.
 
     Keyed purely off precip *amount* (rr >= threshold), consistent with
-    ``rain_expected`` and ``minutes_until_downpour``. An earlier version also
-    counted any step whose precip-*type* flag ``pt`` was non-"none", but in
-    practice ``pt`` is set ("rain") across nearly the whole horizon while rr is
-    still trace drizzle — so the countdown locked onto the nearest pt-flagged
-    step and produced a misleadingly precise "rain in N min" for what was really
-    near-dry. Dropping the pt-OR clause makes the countdown reflect forecast
-    precipitation, not the broadly-set type flag.
+    ``rain_expected`` and ``minutes_until_downpour`` (an earlier version also
+    counted the broadly-set precip-*type* flag — see v0.3.1 notes).
+
+    Counts down to the window START (ts - 15 min, clamped to 0): timestamps
+    label the END of each accumulation window, so counting to ts itself
+    overstated the lead by up to 15 min — on top of the model's own ~10-min
+    publish latency, a "rain in 14 min" push could coincide with the first
+    drops (v0.3.2).
     """
     rr = data.params.get("rr") or []
     now = dt_util.utcnow()
@@ -204,7 +223,7 @@ def minutes_until_rain(
             continue
         rr_i = rr[i] if i < len(rr) else None
         if rr_i is not None and rr_i >= threshold:
-            minutes = (ts - now).total_seconds() / 60
+            minutes = (ts - STEP_DELTA - now).total_seconds() / 60
             return max(0, int(round(minutes)))
     return None
 
@@ -212,31 +231,21 @@ def minutes_until_rain(
 def minutes_until_downpour(
     data: GeoSphereData, threshold: float = DOWNPOUR_THRESHOLD_MM
 ) -> int | None:
-    """Whole minutes until the first step whose precip reaches ``threshold``.
+    """Minutes until the first window reaching the (heavier) downpour threshold.
 
-    Unlike :func:`minutes_until_rain`, this keys purely off precip *amount*
-    (mm per 15-min step): a downpour is about intensity, not whether some
-    precipitation type happens to be flagged. Returns None if no step within
-    the horizon is that heavy.
+    Same countdown as :func:`minutes_until_rain`, keyed to intensity: mm per
+    15-min window. Returns None if no window within the horizon is that heavy.
     """
-    rr = data.params.get("rr") or []
-    now = dt_util.utcnow()
-    for i, ts in enumerate(data.timestamps):
-        if ts is None:
-            continue
-        rr_i = rr[i] if i < len(rr) else None
-        if rr_i is not None and rr_i >= threshold:
-            minutes = (ts - now).total_seconds() / 60
-            return max(0, int(round(minutes)))
-    return None
+    return minutes_until_rain(data, threshold)
 
 
 def rain_expected(
     data: GeoSphereData, threshold: float = RAIN_THRESHOLD_MM
 ) -> bool:
-    """True if any of the next-hour steps reaches the rain threshold."""
-    rr = (data.params.get("rr") or [])[:STEPS_PER_HOUR]
-    return any(v is not None and v >= threshold for v in rr)
+    """True if any still-open window in the next hour reaches the threshold."""
+    rr = data.params.get("rr") or []
+    idxs = _future_window_indices(data, dt_util.utcnow())[:STEPS_PER_HOUR]
+    return any(v >= threshold for v in _values_at(rr, idxs))
 
 
 def hourly_forecast(data: GeoSphereData) -> list[dict[str, Any]]:

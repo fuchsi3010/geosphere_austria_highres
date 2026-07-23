@@ -27,8 +27,11 @@ PUBLISH_OFFSET = timedelta(seconds=30)
 PUBLISH_JITTER = timedelta(seconds=90)
 # If a fetch returns the same reference_time as before (publish ran late), retry
 # after this short delay instead of waiting a full run — capped to avoid a storm.
+# Live checks show GeoSphere publishes runs ~10 min after their nominal time
+# (at :08 the newest run can still be the :45 one), so chase for up to ~12 min
+# past the boundary; 3 retries (~5 min) always gave up before the run appeared.
 STALENESS_RETRY = timedelta(seconds=90)
-MAX_STALENESS_RETRIES = 3
+MAX_STALENESS_RETRIES = 8
 # After a failed fetch, retry sooner than the next publish boundary.
 FAILURE_RETRY = timedelta(minutes=2)
 # Absolute floor between real network calls: an unscheduled refresh (manual
@@ -50,6 +53,10 @@ CONDITION_POURING_MMH = 4.0
 REQUEST_TIMEOUT = 10
 STEP_MINUTES = 15
 STEPS_PER_HOUR = 4
+# Each timestamp labels the END of its 15-min accumulation window (the first
+# timestamp is reference_time + 15 min). Countdowns subtract this to point at
+# the window START — when rain can actually begin.
+STEP_DELTA = timedelta(minutes=STEP_MINUTES)
 
 ATTRIBUTION = "Data: GeoSphere Austria Data Hub (CC BY 4.0)"
 
