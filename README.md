@@ -57,11 +57,14 @@ Per configured point you get one device with:
 
 - **`weather.*`** — current conditions (from the next 15-min step) + an
   **hourly** forecast for the ~3 h horizon.
-- **`sensor.*_precipitation`** — precip in the next 15 min (mm).
-- **`sensor.*_precipitation_next_hour`** — summed precip over the next hour (mm).
-- **`sensor.*_minutes_until_rain`** — minutes until the first raining step.
-- **`sensor.*_minutes_until_downpour`** — minutes until the first step reaching
-  the *downpour* threshold (heavy rain only). `unknown` when none is forecast.
+- **`sensor.*_precipitation`** — precip in the current 15-min window (mm).
+- **`sensor.*_precipitation_next_hour`** — summed precip over the still-open
+  windows of the next hour (mm).
+- **`sensor.*_minutes_until_rain`** — minutes until rain can begin: countdown
+  to the *start* of the first window reaching the rain threshold (0 = that
+  window is already open).
+- **`sensor.*_minutes_until_downpour`** — same countdown for the *downpour*
+  threshold (heavy rain only). `unknown` when none is forecast.
 - **`sensor.*_precipitation_type`** — enum (`none`/`rain`/`snow`/…).
 - **`sensor.*_temperature`**, **`sensor.*_humidity`**, **`sensor.*_wind_speed`**.
 - **`binary_sensor.*_rain_expected`** — on when rain is forecast within the
